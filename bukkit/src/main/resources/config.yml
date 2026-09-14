@@ -1,0 +1,9 @@
+database:
+  mode: sqlite
+  sqlite-file: membership.db
+  postgresql:
+    host: 127.0.0.1
+    port: 5432
+    database: mythicland
+    username: postgres
+    password: ''

@@ -1,0 +1,12 @@
+name: MythicMembership
+version: '${version}'
+main: cn.mythicland.mythicmembership.bukkit.MythicMembershipPlugin
+load: STARTUP
+author: ShanguanLinG
+commands:
+  membership:
+    description: Membership administration
+    aliases: [mythicmembership, mms]
+permissions:
+  mythicmembership.admin:
+    default: op

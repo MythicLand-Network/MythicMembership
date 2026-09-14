@@ -1,0 +1,44 @@
+plugins {
+    id 'com.gradleup.shadow' version '8.3.0' apply false
+}
+
+allprojects {
+    group = 'cn.mythicland'
+    version = '1.0.0'
+
+    repositories {
+        mavenCentral()
+        maven { url = 'https://hub.spigotmc.org/nexus/repository/public/' }
+        maven { url = 'https://hub.spigotmc.org/nexus/content/repositories/snapshots/' }
+    }
+}
+
+subprojects {
+    apply plugin: 'java'
+
+    java {
+        toolchain { languageVersion = JavaLanguageVersion.of(21) }
+        withSourcesJar()
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+        options.release.set(21)
+    }
+
+    tasks.withType(Test).configureEach {
+        useJUnitPlatform()
+        jvmArgs '-Xshare:off'
+    }
+
+    tasks.withType(AbstractArchiveTask).configureEach {
+        archiveVersion.set('')
+    }
+
+    dependencies {
+        testImplementation platform('org.junit:junit-bom:5.10.2')
+        testImplementation 'org.junit.jupiter:junit-jupiter'
+        testImplementation 'org.mockito:mockito-core:5.12.0'
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    }
+}
