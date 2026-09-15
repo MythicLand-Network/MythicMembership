@@ -13,4 +13,12 @@ include 'bukkit'
 project(':api').name = 'mythic-membership-api'
 project(':bukkit').name = 'mythic-membership-bukkit'
 
-includeBuild('../MythicFramework')
+def frameworkDirectory = rootDir.parentFile.name == 'dependencies'
+        ? file('../MythicFramework')
+        : file('dependencies/MythicFramework')
+
+if (!frameworkDirectory.isDirectory()) {
+    throw new GradleException("Missing MythicFramework submodule: ${frameworkDirectory}")
+}
+
+includeBuild(frameworkDirectory)

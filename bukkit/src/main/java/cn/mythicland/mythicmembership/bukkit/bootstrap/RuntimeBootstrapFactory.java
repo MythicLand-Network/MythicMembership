@@ -1,5 +1,6 @@
 package cn.mythicland.mythicmembership.bukkit.bootstrap;
 
+import cn.mythicland.framework.runtime.FrameworkRuntimeClassLoading;
 import cn.mythicland.framework.runtime.RuntimeBootstrap;
 import cn.mythicland.mythicmembership.bukkit.MythicMembershipPlugin;
 
@@ -22,17 +23,19 @@ public final class RuntimeBootstrapFactory {
                         activePlatforms
                 )
                 .loggers(plugin.getLogger()::info, plugin.getLogger()::warning)
-                .childFirstPackages(List.of(
-                        "cn.mythicland.mythicmembership.bukkit.",
-                        "com.zaxxer.hikari.",
-                        "org.flywaydb.",
-                        "org.postgresql.",
-                        "org.sqlite.",
-                        "com.fasterxml.jackson.",
-                        "tools.jackson."
+                .classLoading(FrameworkRuntimeClassLoading.bukkit(
+                        List.of(
+                                "cn.mythicland.mythicmembership.bukkit.",
+                                "com.zaxxer.hikari.",
+                                "org.flywaydb.",
+                                "org.postgresql.",
+                                "org.sqlite.",
+                                "com.fasterxml.jackson.",
+                                "tools.jackson."
+                        ),
+                        List.of(MythicMembershipPlugin.class.getName()),
+                        List.of("cn.mythicland.mythicmembership.bukkit.bootstrap.")
                 ))
-                .parentFirstClasses(List.of(MythicMembershipPlugin.class.getName()))
-                .parentFirstPackages(List.of("cn.mythicland.mythicmembership.bukkit.bootstrap."))
                 .build();
     }
 }

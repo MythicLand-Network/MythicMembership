@@ -1,0 +1,3 @@
+[submodule "dependencies/MythicFramework"]
+	path = dependencies/MythicFramework
+	url = ../MythicFramework.git

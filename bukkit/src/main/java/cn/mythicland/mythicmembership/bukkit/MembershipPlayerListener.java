@@ -1,10 +1,14 @@
 package cn.mythicland.mythicmembership.bukkit;
 
+import cn.mythicland.framework.bukkit.ListenerComponent;
+import cn.mythicland.framework.component.InjectComponent;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
+@InjectComponent
+@ListenerComponent
 final class MembershipPlayerListener implements Listener {
     private static final String LOAD_FAILED_MESSAGE = "§c会员数据加载失败, 请稍后重试。";
 
