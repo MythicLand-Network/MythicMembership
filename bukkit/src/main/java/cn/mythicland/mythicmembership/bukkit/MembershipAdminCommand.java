@@ -1,7 +1,11 @@
 package cn.mythicland.mythicmembership.bukkit;
 
 import cn.mythicland.framework.bukkit.CommandComponent;
-import cn.mythicland.framework.command.*;
+import cn.mythicland.framework.command.AbstractCommand;
+import cn.mythicland.framework.command.CommandArgument;
+import cn.mythicland.framework.command.CommandContext;
+import cn.mythicland.framework.command.CommandRoute;
+import cn.mythicland.framework.command.SuggestionSource;
 import cn.mythicland.mythicmembership.api.MembershipDefinition;
 import cn.mythicland.mythicmembership.api.MembershipKey;
 import cn.mythicland.mythicmembership.api.MembershipRecord;
@@ -11,7 +15,12 @@ import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 
 import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -19,6 +28,9 @@ import java.util.function.Function;
 @CommandComponent
 public final class MembershipAdminCommand extends AbstractCommand {
     private static final String PERMISSION = "mythicmembership.admin";
+    private static final DateTimeFormatter EXPIRY_FORMATTER = DateTimeFormatter
+            .ofPattern("yyyy-MM-dd HH:mm:ss")
+            .withZone(ZoneId.systemDefault());
 
     private final MythicMembershipPlugin plugin;
     private final MembershipService service;
@@ -26,17 +38,6 @@ public final class MembershipAdminCommand extends AbstractCommand {
     MembershipAdminCommand(MythicMembershipPlugin plugin, MembershipService service) {
         this.plugin = plugin;
         this.service = service;
-    }
-
-    @CommandRoute(
-            path = {"membership"},
-            permission = PERMISSION,
-            usages = "/membership info|set|extend|permanent|revoke"
-    )
-    private void root(CommandContext context) {
-        context.sender().sendMessage(ChatColor.YELLOW + "/membership info <玩家|UUID>");
-        context.sender().sendMessage(ChatColor.YELLOW + "/membership set|extend <玩家|UUID> <会员ID> <期限>");
-        context.sender().sendMessage(ChatColor.YELLOW + "/membership permanent|revoke <玩家|UUID> <会员ID>");
     }
 
     @CommandRoute(
@@ -63,7 +64,11 @@ public final class MembershipAdminCommand extends AbstractCommand {
             maxArguments = 3
     )
     private void set(CommandContext context) {
-        this.changeTimed(context, this.service::set, "已设置");
+        this.changeTimed(
+                context,
+                this.service::set,
+                "§a已为玩家 §e%s §a设置会员 §e%s§a。"
+        );
     }
 
     @CommandRoute(
@@ -74,7 +79,11 @@ public final class MembershipAdminCommand extends AbstractCommand {
             maxArguments = 3
     )
     private void extend(CommandContext context) {
-        this.changeTimed(context, this.service::extend, "已续期");
+        this.changeTimed(
+                context,
+                this.service::extend,
+                "§a已为玩家 §e%s §a续期会员 §e%s§a。"
+        );
     }
 
     @CommandRoute(
@@ -91,7 +100,7 @@ public final class MembershipAdminCommand extends AbstractCommand {
                         uniqueId,
                         MembershipKey.parse(context.argument(1))
                 ),
-                "已设为永久"
+                "§a已将玩家 §e%s §a的会员 §e%s §a设为永久。"
         );
     }
 
@@ -109,31 +118,38 @@ public final class MembershipAdminCommand extends AbstractCommand {
                         uniqueId,
                         MembershipKey.parse(context.argument(1))
                 ),
-                "已撤销"
+                "§a已撤销玩家 §e%s §a的会员 §e%s§a。"
         );
     }
 
     private void changeTimed(
             CommandContext context,
             TimedMutation mutation,
-            String success
+            String successMessage
     ) {
-        MembershipKey key = MembershipKey.parse(context.argument(1));
-        Duration duration = MembershipDurationParser.parse(context.argument(2));
-        this.change(context, uniqueId -> mutation.apply(uniqueId, key, duration), success);
+        try {
+            MembershipKey key = MembershipKey.parse(context.argument(1));
+            Duration duration = MembershipDurationParser.parse(context.argument(2));
+            this.change(context, uniqueId -> mutation.apply(uniqueId, key, duration), successMessage);
+        } catch (IllegalArgumentException exception) {
+            this.send(context.sender(), "§c" + exception.getMessage());
+        }
     }
 
     private void change(
             CommandContext context,
             Function<UUID, CompletableFuture<?>> mutation,
-            String success
+            String successMessage
     ) {
         this.withPlayer(
                 context.sender(),
                 context.argument(0),
                 uniqueId -> mutation.apply(uniqueId)
                         .thenApply(result -> {
-                            this.send(context.sender(), ChatColor.GREEN + success + ": " + uniqueId);
+                            this.send(
+                                    context.sender(),
+                                    successMessage.formatted(context.argument(0), context.argument(1))
+                            );
                             return null;
                         })
         );
@@ -150,31 +166,48 @@ public final class MembershipAdminCommand extends AbstractCommand {
                         new IllegalArgumentException("未找到玩家: " + target)
                 )))
                 .whenComplete((ignored, throwable) -> {
-                    if (throwable != null) this.send(sender, ChatColor.RED + this.message(throwable));
+                    if (throwable != null) {
+                        this.send(sender, "§c" + this.message(throwable));
+                    }
                 });
     }
 
     private void sendInfo(CommandSender sender, MembershipView view) {
-        this.send(sender, ChatColor.YELLOW + "会员状态: " + view.playerUniqueId());
+        List<String> lines = new ArrayList<>();
+        lines.add("§a玩家会员信息: §f" + view.playerUniqueId());
         view.records().stream()
                 .sorted(Comparator.comparing(record -> record.key().value()))
-                .forEach(record -> this.send(sender, this.describe(view, record)));
-        if (view.records().isEmpty()) this.send(sender, ChatColor.GRAY + "无会员记录");
+                .forEach(record -> {
+                    lines.add(this.describeName(record));
+                    lines.add(this.describeDetails(record));
+                });
+        if (view.records().isEmpty()) lines.add("§c该玩家没有会员记录。");
+        this.send(sender, lines.toArray(String[]::new));
     }
 
-    private String describe(MembershipView view, MembershipRecord record) {
+    private String describeName(MembershipRecord record) {
         String name = this.service.definition(record.key())
                 .map(MembershipDefinition::displayName)
                 .orElse(record.key().value());
-        String expiry = record.permanent() ? "永久" : String.valueOf(record.expiresAt().toEpochMilli());
-        return ChatColor.translateAlternateColorCodes(
-                '&',
-                "&7- " + name + " &8[" + record.key() + "] &7" + expiry
-        );
+        return "§7会员: §f" + ChatColor.translateAlternateColorCodes('&', name);
     }
 
-    private void send(CommandSender sender, String message) {
-        Bukkit.getScheduler().runTask(this.plugin, () -> sender.sendMessage(message));
+    private String describeDetails(MembershipRecord record) {
+        return "§7ID: §f" + record.key() + " §8| §7作用域: §f" + record.scope()
+                + " §8| §7有效期: " + this.expiry(record);
+    }
+
+    private String expiry(MembershipRecord record) {
+        if (record.permanent()) return "§a永久";
+        Instant expiresAt = record.expiresAt();
+        String formatted = EXPIRY_FORMATTER.format(expiresAt);
+        return expiresAt.isAfter(Instant.now()) ? "§e" + formatted : "§c" + formatted + " (已过期)";
+    }
+
+    private void send(CommandSender sender, String... messages) {
+        Bukkit.getScheduler().runTask(this.plugin, () -> {
+            for (String message : messages) sender.sendMessage(message);
+        });
     }
 
     private String message(Throwable throwable) {

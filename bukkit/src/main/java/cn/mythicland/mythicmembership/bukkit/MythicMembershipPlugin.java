@@ -1,6 +1,7 @@
 package cn.mythicland.mythicmembership.bukkit;
 
-import cn.mythicland.mythicmembership.bukkit.bootstrap.RuntimeBootstrap;
+import cn.mythicland.framework.runtime.RuntimeBootstrap;
+import cn.mythicland.mythicmembership.bukkit.bootstrap.RuntimeBootstrapFactory;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.Locale;
@@ -16,10 +17,8 @@ public final class MythicMembershipPlugin extends JavaPlugin {
                 .trim()
                 .toLowerCase(Locale.ROOT);
         if (databaseMode.equals("postgres")) databaseMode = "postgresql";
-        this.runtimeBootstrap = new RuntimeBootstrap(
+        this.runtimeBootstrap = RuntimeBootstrapFactory.create(
                 this,
-                "cn.mythicland.mythicmembership.bukkit.MembershipRuntime",
-                this.getDataFolder().toPath(),
                 Set.of("common", databaseMode)
         );
         this.runtimeBootstrap.load();
