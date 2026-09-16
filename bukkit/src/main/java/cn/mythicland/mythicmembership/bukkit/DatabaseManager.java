@@ -1,60 +1,39 @@
 package cn.mythicland.mythicmembership.bukkit;
 
-import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
-import org.flywaydb.core.Flyway;
+import cn.mythicland.framework.database.DatabaseConfiguration;
 
-import javax.annotation.Nonnull;
 import javax.sql.DataSource;
-import java.io.IOException;
-import java.nio.file.Files;
+import java.util.List;
+import java.util.logging.Logger;
 
 final class DatabaseManager implements AutoCloseable {
-    private final HikariDataSource dataSource;
+    private final cn.mythicland.framework.database.DatabaseManager frameworkDatabase;
 
     DatabaseManager(MembershipSettings settings) {
-        if (settings.databaseMode() == DatabaseMode.SQLITE) {
-            try {
-                Files.createDirectories(settings.sqliteFile().toAbsolutePath().normalize().getParent());
-            } catch (IOException exception) {
-                throw new IllegalStateException("Failed to create membership database directory", exception);
-            }
-        }
-        HikariDataSource candidate = getHikariDataSource(settings);
-        try {
-            Flyway.configure()
-                    .dataSource(candidate)
-                    .locations("classpath:db/" + settings.databaseMode().name().toLowerCase())
-                    .load()
-                    .migrate();
-        } catch (RuntimeException exception) {
-            candidate.close();
-            throw new IllegalStateException("Failed to migrate membership database", exception);
-        }
-        this.dataSource = candidate;
-    }
-
-    @Nonnull
-    private static HikariDataSource getHikariDataSource(MembershipSettings settings) {
-        HikariConfig config = new HikariConfig();
-        config.setJdbcUrl(settings.jdbcUrl());
-        config.setMaximumPoolSize(settings.databaseMode() == DatabaseMode.SQLITE ? 1 : 10);
-        config.setPoolName("MythicMembership");
-        if (settings.databaseMode() == DatabaseMode.SQLITE) config.setConnectionInitSql("PRAGMA foreign_keys = ON");
-        else {
-            config.setUsername(settings.username());
-            config.setPassword(settings.password());
-        }
-        HikariDataSource candidate = new HikariDataSource(config);
-        return candidate;
+        cn.mythicland.framework.database.DatabaseMode mode = settings.databaseMode() == DatabaseMode.SQLITE
+                ? cn.mythicland.framework.database.DatabaseMode.SQLITE
+                : cn.mythicland.framework.database.DatabaseMode.POSTGRESQL;
+        DatabaseConfiguration configuration = DatabaseConfiguration.builder(mode, settings.jdbcUrl())
+                .sqliteFile(settings.sqliteFile())
+                .credentials(settings.username(), settings.password())
+                .maximumPoolSize(settings.databaseMode() == DatabaseMode.SQLITE ? 1 : 10)
+                .minimumIdle(settings.databaseMode() == DatabaseMode.SQLITE ? 1 : 10)
+                .poolName("MythicMembership")
+                .migrationLocations(List.of("classpath:db/" + settings.databaseMode().name().toLowerCase()))
+                .build();
+        this.frameworkDatabase = new cn.mythicland.framework.database.DatabaseManager(
+                configuration,
+                Logger.getLogger("MythicMembership")
+        );
+        this.frameworkDatabase.start();
     }
 
     DataSource dataSource() {
-        return this.dataSource;
+        return this.frameworkDatabase.dataSource();
     }
 
     @Override
     public void close() {
-        this.dataSource.close();
+        this.frameworkDatabase.close();
     }
 }
