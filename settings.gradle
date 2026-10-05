@@ -1,17 +1,4 @@
-pluginManagement {
-    repositories {
-        gradlePluginPortal()
-        mavenCentral()
-    }
-}
-
-rootProject.name = 'MythicMembership'
-
-include 'api'
-include 'bukkit'
-
-project(':api').name = 'mythic-membership-api'
-project(':bukkit').name = 'mythic-membership-bukkit'
+rootProject.name = 'mythic-memberlib'
 
 def frameworkDirectory = file('../MythicFramework')
 

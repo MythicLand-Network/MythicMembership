@@ -1,44 +1,59 @@
 plugins {
-    id 'com.gradleup.shadow' version '8.3.0' apply false
+    id 'idea'
+    id 'java-library'
 }
 
-allprojects {
-    group = 'cn.mythicland'
-    version = '1.0.0'
+idea.module.name = name
 
-    repositories {
-        mavenCentral()
-        maven { url = 'https://hub.spigotmc.org/nexus/repository/public/' }
-        maven { url = 'https://hub.spigotmc.org/nexus/content/repositories/snapshots/' }
-    }
+group = 'cn.mythicland'
+version = '1.0.0'
+
+repositories {
+    mavenCentral()
+    maven { url = 'https://hub.spigotmc.org/nexus/repository/public/' }
+    maven { url = 'https://hub.spigotmc.org/nexus/content/repositories/snapshots/' }
 }
 
-subprojects {
-    apply plugin: 'java'
-
-    java {
-        toolchain { languageVersion = JavaLanguageVersion.of(21) }
-        withSourcesJar()
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
     }
+    withSourcesJar()
+}
 
-    tasks.withType(JavaCompile).configureEach {
-        options.encoding = 'UTF-8'
-        options.release.set(21)
-    }
+dependencies {
+    compileOnly 'org.spigotmc:spigot-api:1.8.8-R0.1-SNAPSHOT'
+    compileOnly 'cn.mythicland:mythic-framework-core:1.0.0'
+    compileOnly 'cn.mythicland:mythic-framework-bukkit:1.0.0'
 
-    tasks.withType(Test).configureEach {
-        useJUnitPlatform()
-        jvmArgs '-Xshare:off'
-    }
+    testImplementation platform('org.junit:junit-bom:5.10.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation 'org.mockito:mockito-core:5.12.0'
+    testImplementation 'org.spigotmc:spigot-api:1.8.8-R0.1-SNAPSHOT'
+    testImplementation 'cn.mythicland:mythic-framework-core:1.0.0'
+    testImplementation 'cn.mythicland:mythic-framework-bukkit:1.0.0'
+    testImplementation 'org.xerial:sqlite-jdbc:3.46.1.3'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
 
-    tasks.withType(AbstractArchiveTask).configureEach {
-        archiveVersion.set('')
-    }
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release.set(21)
+}
 
-    dependencies {
-        testImplementation platform('org.junit:junit-bom:5.10.2')
-        testImplementation 'org.junit.jupiter:junit-jupiter'
-        testImplementation 'org.mockito:mockito-core:5.12.0'
-        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-    }
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+    jvmArgs '-Xshare:off'
+}
+
+tasks.withType(AbstractArchiveTask).configureEach {
+    archiveVersion.set('')
+}
+
+tasks.named('jar') {
+    archiveFileName = 'MythicMemberLib.jar'
+}
+
+tasks.named('sourcesJar') {
+    archiveFileName = 'MythicMemberLib-sources.jar'
 }
