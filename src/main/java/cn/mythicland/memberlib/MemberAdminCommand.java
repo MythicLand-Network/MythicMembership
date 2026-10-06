@@ -41,9 +41,9 @@ public final class MemberAdminCommand extends AbstractCommand {
     }
 
     @CommandRoute(
-            path = {"membership", "info"},
+            path = {"member", "info"},
             permission = PERMISSION,
-            usages = "/membership info <玩家|UUID>",
+            usages = "/member info <玩家|UUID>",
             minArguments = 1,
             maxArguments = 1,
             arguments = @CommandArgument(index = 0, source = SuggestionSource.ONLINE_PLAYERS)
@@ -57,9 +57,9 @@ public final class MemberAdminCommand extends AbstractCommand {
     }
 
     @CommandRoute(
-            path = {"membership", "set"},
+            path = {"member", "set"},
             permission = PERMISSION,
-            usages = "/membership set <玩家|UUID> <会员ID> <期限>",
+            usages = "/member set <玩家|UUID> <会员ID> <期限>",
             minArguments = 3,
             maxArguments = 3
     )
@@ -72,9 +72,9 @@ public final class MemberAdminCommand extends AbstractCommand {
     }
 
     @CommandRoute(
-            path = {"membership", "extend"},
+            path = {"member", "extend"},
             permission = PERMISSION,
-            usages = "/membership extend <玩家|UUID> <会员ID> <期限>",
+            usages = "/member extend <玩家|UUID> <会员ID> <期限>",
             minArguments = 3,
             maxArguments = 3
     )
@@ -87,9 +87,9 @@ public final class MemberAdminCommand extends AbstractCommand {
     }
 
     @CommandRoute(
-            path = {"membership", "permanent"},
+            path = {"member", "permanent"},
             permission = PERMISSION,
-            usages = "/membership permanent <玩家|UUID> <会员ID>",
+            usages = "/member permanent <玩家|UUID> <会员ID>",
             minArguments = 2,
             maxArguments = 2
     )
@@ -105,9 +105,9 @@ public final class MemberAdminCommand extends AbstractCommand {
     }
 
     @CommandRoute(
-            path = {"membership", "revoke"},
+            path = {"member", "revoke"},
             permission = PERMISSION,
-            usages = "/membership revoke <玩家|UUID> <会员ID>",
+            usages = "/member revoke <玩家|UUID> <会员ID>",
             minArguments = 2,
             maxArguments = 2
     )

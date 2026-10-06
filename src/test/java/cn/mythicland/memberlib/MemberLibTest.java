@@ -48,7 +48,7 @@ class MemberLibTest {
         Player onlinePlayer = mock(Player.class);
         UUID onlineId = UUID.randomUUID();
         when(onlinePlayer.getUniqueId()).thenReturn(onlineId);
-        when(host.getCommand("membership")).thenReturn(command);
+        when(host.getCommand("member")).thenReturn(command);
         when(server.getPluginManager()).thenReturn(pluginManager);
         when(server.getServicesManager()).thenReturn(services);
         when(server.getScheduler()).thenReturn(scheduler);

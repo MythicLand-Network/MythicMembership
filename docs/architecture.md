@@ -14,7 +14,7 @@ MythicMemberLib 是一个 Java 库, 由宿主打包并管理生命周期。代�
 
 ## 宿主生命周期
 
-宿主创建 MemberLib(JavaPlugin), 取得 MemberService 并注入业务组件。宿主的 plugin.yml 声明原有 membership 命令和权限；启用时调用 enable(DataSource, DatabaseMode), 卸载时先释放宿主的会员定义注册, 再调用 close(), 最后关闭宿主数据库。库只撤销自己注册的监听器、命令和定时任务, 不清理宿主的其他服务。
+宿主创建 MemberLib(JavaPlugin), 取得 MemberService 并注入业务组件。宿主的 plugin.yml 声明 member 命令和原有权限；启用时调用 enable(DataSource, DatabaseMode), 卸载时先释放宿主的会员定义注册, 再调用 close(), 最后关闭宿主数据库。库只撤销自己注册的监听器、命令和定时任务, 不清理宿主的其他服务。
 
 ## 服务与模型
 
