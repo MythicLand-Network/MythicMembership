@@ -9,12 +9,31 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class MemberServiceTest {
+    @Test
+    void readinessShouldTrackLoadAndEvictionWithoutHidingMissingViews() {
+        UUID playerId = UUID.randomUUID();
+        MemberRepository repository = mock(MemberRepository.class);
+        when(repository.load(playerId)).thenReturn(List.of());
+
+        try (MemberService service = new MemberService(mock(JavaPlugin.class))) {
+            service.connect(repository);
+            assertFalse(service.isLoaded(playerId));
+            assertThrows(IllegalStateException.class, () -> service.view(playerId));
+            service.load(playerId).join();
+            assertTrue(service.isLoaded(playerId));
+            service.evict(playerId);
+            assertFalse(service.isLoaded(playerId));
+            assertThrows(IllegalStateException.class, () -> service.view(playerId));
+        }
+    }
+
     @Test
     void viewsShouldObserveDefinitionChangesWithoutChangingEarlierSnapshots() {
         MemberRepository repository = mock(MemberRepository.class);

@@ -61,6 +61,10 @@ public final class MemberService implements AutoCloseable {
                 .toList();
     }
 
+    public boolean isLoaded(UUID playerUniqueId) {
+        return this.recordsByPlayer.containsKey(playerUniqueId);
+    }
+
     public MemberView view(UUID playerUniqueId) {
         List<MemberRecord> records = this.recordsByPlayer.get(playerUniqueId);
         if (records == null) throw new IllegalStateException("Membership data is not loaded for " + playerUniqueId);
