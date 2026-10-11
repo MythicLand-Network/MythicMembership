@@ -79,6 +79,11 @@ public final class MemberService implements AutoCloseable {
         }, this.executor);
     }
 
+    public CompletableFuture<MemberView> lookup(UUID playerUniqueId) {
+        return CompletableFuture.supplyAsync(() -> new MemberView(playerUniqueId,
+                this.repository.load(playerUniqueId), this.definitionSnapshot(), Instant.now()), this.executor);
+    }
+
     public CompletableFuture<MemberRecord> set(
             UUID playerUniqueId,
             MemberKey key,

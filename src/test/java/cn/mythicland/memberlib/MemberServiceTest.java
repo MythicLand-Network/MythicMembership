@@ -26,8 +26,14 @@ class MemberServiceTest {
             service.connect(repository);
             assertFalse(service.isLoaded(playerId));
             assertThrows(IllegalStateException.class, () -> service.view(playerId));
+            assertEquals(List.of(), service.lookup(playerId).join().records());
+            assertFalse(service.isLoaded(playerId));
             service.load(playerId).join();
             assertTrue(service.isLoaded(playerId));
+            MemberRecord offlineRecord = new MemberRecord(playerId, MemberKey.of("test", "member"), MemberScope.NETWORK, null);
+            when(repository.load(playerId)).thenReturn(List.of(offlineRecord));
+            assertEquals(List.of(offlineRecord), service.lookup(playerId).join().records());
+            assertEquals(List.of(), service.view(playerId).records());
             service.evict(playerId);
             assertFalse(service.isLoaded(playerId));
             assertThrows(IllegalStateException.class, () -> service.view(playerId));

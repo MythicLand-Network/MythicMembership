@@ -18,7 +18,7 @@ MythicMemberLib 是一个 Java 库, 由宿主打包并管理生命周期。代�
 
 ## 服务与模型
 
-MemberService 负责定义注册、玩家缓存、异步加载和修改。MemberRepository 保留原表、字段与到期规则；MemberChangedEvent 经宿主调度器在主线程发布。MemberKey、MemberScope、MemberRecord、MemberView 是会员模型, MemberRegistration 表示一项定义的注册生命周期。
+MemberService 负责定义注册、玩家缓存、异步加载和修改。lookup 异步读取独立会员视图, 不写入或覆盖在线缓存, 用于宿主显示离线玩家会员信息。MemberRepository 保留原表、字段与到期规则；MemberChangedEvent 经宿主调度器在主线程发布。MemberKey、MemberScope、MemberRecord、MemberView 是会员模型, MemberRegistration 表示一项定义的注册生命周期。
 
 ## 存储接入
 
