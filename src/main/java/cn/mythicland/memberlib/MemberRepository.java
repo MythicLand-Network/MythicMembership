@@ -76,24 +76,78 @@ final class MemberRepository {
                 + "CASE WHEN mythic_membership.expires_at_millis IS NULL THEN NULL ELSE " + maximum
                 + "(mythic_membership.expires_at_millis, ?) + ? END";
         long initialExpiry = Math.addExact(nowMillis, durationMillis);
+        MemberRecord committed = null;
+        try (Connection connection = this.dataSource.getConnection()) {
+            connection.setAutoCommit(false);
+            try {
+                try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                    statement.setString(1, playerUniqueId.toString());
+                    statement.setString(2, key.value());
+                    statement.setString(3, scope.value());
+                    statement.setLong(4, initialExpiry);
+                    statement.setLong(5, nowMillis);
+                    statement.setLong(6, durationMillis);
+                    statement.executeUpdate();
+                }
+                MemberRecord result;
+                try (PreparedStatement statement = connection.prepareStatement(
+                        "SELECT expires_at_millis FROM mythic_membership "
+                                + "WHERE player_uuid = ? AND membership_id = ? AND scope = ?"
+                )) {
+                    statement.setString(1, playerUniqueId.toString());
+                    statement.setString(2, key.value());
+                    statement.setString(3, scope.value());
+                    try (ResultSet rows = statement.executeQuery()) {
+                        if (!rows.next()) throw new IllegalStateException("Extended membership was not found: " + key);
+                        long expiry = rows.getLong(1);
+                        if (rows.wasNull()) throw new IllegalStateException("Permanent membership cannot be extended: " + key);
+                        result = new MemberRecord(playerUniqueId, key, scope, Instant.ofEpochMilli(expiry));
+                    }
+                }
+                try {
+                    connection.commit();
+                } catch (SQLException exception) {
+                    throw new MemberCommitException("Membership commit outcome is unknown: " + key, exception);
+                }
+                committed = result;
+            } catch (SQLException | RuntimeException exception) {
+                try {
+                    connection.rollback();
+                } catch (SQLException rollbackFailure) {
+                    exception.addSuppressed(rollbackFailure);
+                }
+                throw exception;
+            }
+        } catch (SQLException exception) {
+            if (committed == null) {
+                throw new IllegalStateException("Failed to extend membership " + key + " for " + playerUniqueId, exception);
+            }
+            // A connection close failure cannot undo an acknowledged commit.
+        }
+        return committed;
+    }
+
+    List<MemberRecord> activeMembers(MemberKey key, MemberScope scope) {
+        String sql = "SELECT player_uuid, expires_at_millis FROM mythic_membership "
+                + "WHERE membership_id = ? AND scope = ? AND (expires_at_millis IS NULL OR expires_at_millis > ?)";
         try (Connection connection = this.dataSource.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setString(1, playerUniqueId.toString());
-            statement.setString(2, key.value());
-            statement.setString(3, scope.value());
-            statement.setLong(4, initialExpiry);
-            statement.setLong(5, nowMillis);
-            statement.setLong(6, durationMillis);
-            statement.executeUpdate();
+            statement.setString(1, key.value());
+            statement.setString(2, scope.value());
+            statement.setLong(3, System.currentTimeMillis());
+            try (ResultSet rows = statement.executeQuery()) {
+                List<MemberRecord> records = new ArrayList<>();
+                while (rows.next()) {
+                    long expiry = rows.getLong("expires_at_millis");
+                    boolean permanent = rows.wasNull();
+                    records.add(new MemberRecord(UUID.fromString(rows.getString("player_uuid")),
+                            key, scope, permanent ? null : Instant.ofEpochMilli(expiry)));
+                }
+                return List.copyOf(records);
+            }
         } catch (SQLException exception) {
-            throw new IllegalStateException("Failed to extend membership " + key + " for " + playerUniqueId, exception);
+            throw new IllegalStateException("Failed to load active memberships: " + key, exception);
         }
-        MemberRecord result = this.load(playerUniqueId).stream()
-                .filter(record -> record.key().equals(key) && record.scope().equals(scope))
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException("Extended membership was not found: " + key));
-        if (result.permanent()) throw new IllegalStateException("Permanent membership cannot be extended: " + key);
-        return result;
     }
 
     boolean revoke(

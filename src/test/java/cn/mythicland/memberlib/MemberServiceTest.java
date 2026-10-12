@@ -17,6 +17,30 @@ import static org.mockito.Mockito.when;
 
 class MemberServiceTest {
     @Test
+    void committedExtensionIsIndependentOfCacheRefreshAndActiveMemberQueries() {
+        UUID player = UUID.randomUUID();
+        MemberKey key = MemberKey.of("test", "room");
+        MemberRepository repository = mock(MemberRepository.class);
+        MemberRecord record = new MemberRecord(player, key, MemberScope.NETWORK, java.time.Instant.now().plusSeconds(86400));
+        JavaPlugin plugin = mock(JavaPlugin.class);
+        when(plugin.getLogger()).thenReturn(java.util.logging.Logger.getAnonymousLogger());
+        when(repository.load(player)).thenReturn(List.of());
+        when(repository.extend(org.mockito.ArgumentMatchers.eq(player), org.mockito.ArgumentMatchers.eq(key),
+                org.mockito.ArgumentMatchers.eq(MemberScope.NETWORK), org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyLong())).thenReturn(record);
+        when(repository.activeMembers(key, MemberScope.NETWORK)).thenReturn(List.of(record));
+        try (MemberService service = new MemberService(plugin)) {
+            service.connect(repository);
+            service.register(new MemberDefinition(key, MemberScope.NETWORK, "房间", "", 0));
+            service.load(player).join();
+            when(repository.load(player)).thenThrow(new IllegalStateException("cache reload failed"));
+            assertEquals(record, service.extendCommitted(player, key, java.time.Duration.ofDays(30)).join());
+            service.refresh(player);
+            assertEquals(List.of(record), service.activeMembers(key).join());
+            assertTrue(service.view(player).records().isEmpty());
+        }
+    }
+
+    @Test
     void readinessShouldTrackLoadAndEvictionWithoutHidingMissingViews() {
         UUID playerId = UUID.randomUUID();
         MemberRepository repository = mock(MemberRepository.class);

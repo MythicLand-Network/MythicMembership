@@ -90,6 +90,21 @@ class MemberRepositoryTest {
     }
 
     @Test
+    void activeMembersShouldExcludeExpiredRecordsAndOtherKeys() {
+        MemberKey key = MemberKey.parse("test:room");
+        UUID active = UUID.randomUUID();
+        UUID permanent = UUID.randomUUID();
+        this.repository.extend(active, key, MemberScope.NETWORK, System.currentTimeMillis(), 60_000);
+        this.repository.set(permanent, key, MemberScope.NETWORK, null);
+        this.repository.set(UUID.randomUUID(), key, MemberScope.NETWORK, Instant.now().minusSeconds(1));
+        this.repository.set(UUID.randomUUID(), MemberKey.parse("test:vip"), MemberScope.NETWORK, null);
+
+        assertEquals(java.util.Set.of(active, permanent), this.repository.activeMembers(key, MemberScope.NETWORK).stream()
+                .map(MemberRecord::playerUniqueId)
+                .collect(java.util.stream.Collectors.toSet()));
+    }
+
+    @Test
     void historicalNameShouldResolvePlayer() {
         UUID playerId = UUID.randomUUID();
         this.repository.rememberName(playerId, "Mythic");

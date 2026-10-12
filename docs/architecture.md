@@ -20,6 +20,8 @@ MythicMemberLib 是一个 Java 库, 由宿主打包并管理生命周期。代�
 
 MemberService 负责定义注册、玩家缓存、异步加载和修改。lookup 异步读取独立会员视图, 不写入或覆盖在线缓存, 用于宿主显示离线玩家会员信息。MemberRepository 保留原表、字段与到期规则；MemberChangedEvent 经宿主调度器在主线程发布。MemberKey、MemberScope、MemberRecord、MemberView 是会员模型, MemberRegistration 表示一项定义的注册生命周期。
 
+activeMembers(MemberKey) 异步返回该权益的有效 MemberRecord 列表, 不覆盖在线缓存。extendCommitted(UUID, MemberKey, Duration) 将权益更新和结果读取置于同一数据库事务, 仅在提交确认后返回记录, 缓存刷新由宿主另行调用 refresh。原 extend 复用相同写入实现并保留原缓存及事件语义。MemberCommitException 表示提交结果无法确认, 宿主应核实而不盲目重复支付或退款。
+
 ## 存储接入
 
 宿主负责配置、连接池、驱动和数据库迁移。库接收通用 JDBC DataSource 与 DatabaseMode, 不创建或关闭连接池, 不读取或生成配置文件, 不依赖宿主插件的类型。宿主需在启用前创建 mythic_membership 和 mythic_membership_player_name 表；memberlib/db 保留原始建表迁移, 供宿主接入时使用。

@@ -100,18 +100,31 @@ public final class MemberService implements AutoCloseable {
             MemberKey key,
             Duration duration
     ) {
+        return this.extendCommitted(playerUniqueId, key, duration)
+                .thenCompose(record -> this.load(playerUniqueId).thenApply(ignored -> {
+                    this.fireChanged(playerUniqueId);
+                    return record;
+                }));
+    }
+
+    public CompletableFuture<MemberRecord> extendCommitted(
+            UUID playerUniqueId,
+            MemberKey key,
+            Duration duration
+    ) {
         this.requirePositive(duration);
         MemberDefinition definition = this.requireDefinition(key);
-        List<MemberRecord> current = this.recordsByPlayer.get(playerUniqueId);
-        if (current != null && current.stream().anyMatch(record -> record.key().equals(key) && record.permanent())) {
-            return CompletableFuture.failedFuture(
-                    new IllegalStateException("Permanent membership cannot be extended: " + key)
-            );
-        }
         long nowMillis = System.currentTimeMillis();
-        return this.mutate(playerUniqueId, () -> this.repository.extend(
+        return CompletableFuture.supplyAsync(() -> this.repository.extend(
                 playerUniqueId, key, definition.scope(), nowMillis, duration.toMillis()
-        ));
+        ), this.executor);
+    }
+
+    public CompletableFuture<List<MemberRecord>> activeMembers(MemberKey key) {
+        MemberDefinition definition = this.requireDefinition(key);
+        return CompletableFuture.supplyAsync(
+                () -> this.repository.activeMembers(key, definition.scope()), this.executor
+        );
     }
 
     public CompletableFuture<MemberRecord> makePermanent(UUID playerUniqueId, MemberKey key) {
@@ -144,7 +157,7 @@ public final class MemberService implements AutoCloseable {
         this.recordsByPlayer.remove(playerUniqueId);
     }
 
-    void refresh(UUID playerUniqueId) {
+    public void refresh(UUID playerUniqueId) {
         List<MemberRecord> previous = this.recordsByPlayer.get(playerUniqueId);
         this.load(playerUniqueId).whenComplete((view, throwable) -> {
             if (throwable != null) {
