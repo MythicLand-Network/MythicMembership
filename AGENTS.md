@@ -1,3 +1,0 @@
-- [开发工作流](../docs/development-workflow.md)
-- [Java 代码规范](../docs/code-style.md)
-- [架构](docs/architecture.md)

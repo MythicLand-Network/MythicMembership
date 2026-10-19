@@ -167,6 +167,17 @@ final class MemberRepository {
         }
     }
 
+    boolean revokeAll(UUID playerUniqueId) {
+        try (Connection connection = this.dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement(
+                     "DELETE FROM mythic_membership WHERE player_uuid = ?")) {
+            statement.setString(1, playerUniqueId.toString());
+            return statement.executeUpdate() > 0;
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Failed to revoke all memberships for " + playerUniqueId, exception);
+        }
+    }
+
     void rememberName(UUID playerUniqueId, String playerName) {
         String sql = "INSERT INTO mythic_membership_player_name "
                 + "(player_name_lower, player_name, player_uuid, last_seen_millis) "

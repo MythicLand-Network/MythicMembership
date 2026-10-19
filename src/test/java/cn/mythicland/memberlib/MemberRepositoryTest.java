@@ -90,6 +90,23 @@ class MemberRepositoryTest {
     }
 
     @Test
+    void revokeAllShouldRemoveEveryScopeAndPreserveOtherPlayersAndNames() {
+        UUID playerId = UUID.randomUUID(), otherPlayer = UUID.randomUUID();
+        MemberKey key = MemberKey.parse("test:vip");
+        this.repository.set(playerId, key, MemberScope.NETWORK, null);
+        this.repository.set(playerId, key, MemberScope.of("local"), Instant.now().plusSeconds(60));
+        this.repository.set(playerId, MemberKey.parse("removed:member"), MemberScope.NETWORK, Instant.now().minusSeconds(60));
+        this.repository.set(otherPlayer, key, MemberScope.NETWORK, null);
+        this.repository.rememberName(playerId, "Player");
+
+        assertTrue(this.repository.revokeAll(playerId));
+        assertTrue(this.repository.load(playerId).isEmpty());
+        assertEquals(1, this.repository.load(otherPlayer).size());
+        assertEquals(playerId, this.repository.findPlayer("Player").orElseThrow());
+        assertFalse(this.repository.revokeAll(playerId));
+    }
+
+    @Test
     void activeMembersShouldExcludeExpiredRecordsAndOtherKeys() {
         MemberKey key = MemberKey.parse("test:room");
         UUID active = UUID.randomUUID();

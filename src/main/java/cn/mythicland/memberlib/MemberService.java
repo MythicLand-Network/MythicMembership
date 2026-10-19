@@ -143,6 +143,10 @@ public final class MemberService implements AutoCloseable {
         }));
     }
 
+    public CompletableFuture<Boolean> revokeAll(UUID playerUniqueId) {
+        return this.mutate(playerUniqueId, () -> this.repository.revokeAll(playerUniqueId));
+    }
+
     void rememberName(UUID playerUniqueId, String playerName) {
         this.repository.rememberName(playerUniqueId, playerName);
     }

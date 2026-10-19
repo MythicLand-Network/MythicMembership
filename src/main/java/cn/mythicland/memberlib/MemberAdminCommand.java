@@ -9,6 +9,7 @@ import cn.mythicland.framework.command.CommandArgument;
 import cn.mythicland.framework.command.CommandContext;
 import cn.mythicland.framework.command.CommandRoute;
 import cn.mythicland.framework.command.SuggestionSource;
+import cn.mythicland.framework.command.SuggestionProvider;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
@@ -26,7 +27,7 @@ import java.util.function.Function;
 
 @InjectComponent
 @CommandComponent
-public final class MemberAdminCommand extends AbstractCommand {
+public final class MemberAdminCommand extends AbstractCommand implements SuggestionProvider {
     private static final String PERMISSION = "mythicmembership.admin";
     private static final DateTimeFormatter EXPIRY_FORMATTER = DateTimeFormatter
             .ofPattern("yyyy-MM-dd HH:mm:ss")
@@ -46,7 +47,7 @@ public final class MemberAdminCommand extends AbstractCommand {
             usages = "/member info <玩家|UUID>",
             minArguments = 1,
             maxArguments = 1,
-            arguments = @CommandArgument(index = 0, source = SuggestionSource.ONLINE_PLAYERS)
+            arguments = @CommandArgument(index = 0, source = SuggestionSource.COMPONENT, provider = MemberAdminCommand.class)
     )
     private void info(CommandContext context) {
         this.withPlayer(context.sender(), context.argument(0), uniqueId -> this.service.load(uniqueId)
@@ -61,7 +62,11 @@ public final class MemberAdminCommand extends AbstractCommand {
             permission = PERMISSION,
             usages = "/member set <玩家|UUID> <会员ID> <期限>",
             minArguments = 3,
-            maxArguments = 3
+            maxArguments = 3,
+            arguments = {
+                    @CommandArgument(index = 0, source = SuggestionSource.COMPONENT, provider = MemberAdminCommand.class),
+                    @CommandArgument(index = 1, source = SuggestionSource.COMPONENT, provider = MemberAdminCommand.class)
+            }
     )
     private void set(CommandContext context) {
         this.changeTimed(
@@ -76,7 +81,11 @@ public final class MemberAdminCommand extends AbstractCommand {
             permission = PERMISSION,
             usages = "/member extend <玩家|UUID> <会员ID> <期限>",
             minArguments = 3,
-            maxArguments = 3
+            maxArguments = 3,
+            arguments = {
+                    @CommandArgument(index = 0, source = SuggestionSource.COMPONENT, provider = MemberAdminCommand.class),
+                    @CommandArgument(index = 1, source = SuggestionSource.COMPONENT, provider = MemberAdminCommand.class)
+            }
     )
     private void extend(CommandContext context) {
         this.changeTimed(
@@ -91,7 +100,11 @@ public final class MemberAdminCommand extends AbstractCommand {
             permission = PERMISSION,
             usages = "/member permanent <玩家|UUID> <会员ID>",
             minArguments = 2,
-            maxArguments = 2
+            maxArguments = 2,
+            arguments = {
+                    @CommandArgument(index = 0, source = SuggestionSource.COMPONENT, provider = MemberAdminCommand.class),
+                    @CommandArgument(index = 1, source = SuggestionSource.COMPONENT, provider = MemberAdminCommand.class)
+            }
     )
     private void permanent(CommandContext context) {
         this.change(
@@ -107,11 +120,19 @@ public final class MemberAdminCommand extends AbstractCommand {
     @CommandRoute(
             path = {"member", "revoke"},
             permission = PERMISSION,
-            usages = "/member revoke <玩家|UUID> <会员ID>",
+            usages = "/member revoke <玩家|UUID> <会员ID|all>",
             minArguments = 2,
-            maxArguments = 2
+            maxArguments = 2,
+            arguments = {
+                    @CommandArgument(index = 0, source = SuggestionSource.COMPONENT, provider = MemberAdminCommand.class),
+                    @CommandArgument(index = 1, source = SuggestionSource.COMPONENT, provider = RevokeSuggestions.class)
+            }
     )
     private void revoke(CommandContext context) {
+        if (context.argument(1).equalsIgnoreCase("all")) {
+            this.change(context, this.service::revokeAll, "§a已撤销玩家 §e%s §a的所有会员。");
+            return;
+        }
         this.change(
                 context,
                 uniqueId -> this.service.revoke(
@@ -120,6 +141,34 @@ public final class MemberAdminCommand extends AbstractCommand {
                 ),
                 "§a已撤销玩家 §e%s §a的会员 §e%s§a。"
         );
+    }
+
+    @Override
+    public List<String> suggestions(CommandSender sender, CommandContext context) {
+        if (context.argumentCount() == 2)
+            return this.service.definitions().stream().map(definition -> definition.key().value()).toList();
+        List<String> players = new ArrayList<>();
+        for (var player : Bukkit.getOnlinePlayers()) {
+            players.add(player.getName());
+            players.add(player.getUniqueId().toString());
+        }
+        return players;
+    }
+
+    @InjectComponent
+    public static final class RevokeSuggestions implements SuggestionProvider {
+        private final MemberAdminCommand command;
+
+        public RevokeSuggestions(MemberAdminCommand command) {
+            this.command = command;
+        }
+
+        @Override
+        public List<String> suggestions(CommandSender sender, CommandContext context) {
+            List<String> values = new ArrayList<>(this.command.suggestions(sender, context));
+            values.add("all");
+            return values;
+        }
     }
 
     private void changeTimed(
