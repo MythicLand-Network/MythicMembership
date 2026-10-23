@@ -52,4 +52,10 @@ public final class MemberView {
                 .filter(java.util.Objects::nonNull)
                 .max(Comparator.comparingInt(value -> value.definition().priority()));
     }
+
+    public MemberNameStyle nameStyle(Set<MemberScope> scopes, MemberNameStyle defaultStyle) {
+        return this.primary(scopes)
+                .map(member -> new MemberNameStyle(member.definition().prefix()))
+                .orElse(defaultStyle);
+    }
 }

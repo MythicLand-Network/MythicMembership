@@ -223,14 +223,14 @@ public final class MemberAdminCommand extends AbstractCommand implements Suggest
 
     private void sendInfo(CommandSender sender, MemberView view) {
         List<String> lines = new ArrayList<>();
-        lines.add("§a玩家会员信息: §f" + view.playerUniqueId());
+        lines.add("§a玩家会员信息: §e" + view.playerUniqueId());
         view.records().stream()
                 .sorted(Comparator.comparing(record -> record.key().value()))
                 .forEach(record -> {
                     lines.add(this.describeName(record));
                     lines.add(this.describeDetails(record));
                 });
-        if (view.records().isEmpty()) lines.add("§c该玩家没有会员记录。");
+        if (view.records().isEmpty()) lines.add("§a该玩家没有会员记录。");
         this.send(sender, lines.toArray(String[]::new));
     }
 
@@ -238,16 +238,16 @@ public final class MemberAdminCommand extends AbstractCommand implements Suggest
         String name = this.service.definition(record.key())
                 .map(MemberDefinition::displayName)
                 .orElse(record.key().value());
-        return "§7会员: §f" + ChatColor.translateAlternateColorCodes('&', name);
+        return "§a会员: §e" + ChatColor.translateAlternateColorCodes('&', name);
     }
 
     private String describeDetails(MemberRecord record) {
-        return "§7ID: §f" + record.key() + " §8| §7作用域: §f" + record.scope()
-                + " §8| §7有效期: " + this.expiry(record);
+        return "  §aID: §e" + record.key() + " §7| §a作用域: §e" + record.scope()
+                + " §7| §a有效期: " + this.expiry(record);
     }
 
     private String expiry(MemberRecord record) {
-        if (record.permanent()) return "§a永久";
+        if (record.permanent()) return "§e永久";
         Instant expiresAt = record.expiresAt();
         String formatted = EXPIRY_FORMATTER.format(expiresAt);
         return expiresAt.isAfter(Instant.now()) ? "§e" + formatted : "§c" + formatted + " (已过期)";
