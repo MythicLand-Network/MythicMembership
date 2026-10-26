@@ -22,7 +22,7 @@ public final class MemberService implements AutoCloseable {
     private final ExecutorService executor;
     private final Map<MemberKey, MemberDefinition> definitions;
     private volatile Map<MemberKey, MemberDefinition> definitionsSnapshot = Map.of();
-    private final Map<UUID, List<MemberRecord>> recordsByPlayer;
+    private final Map<UUID, MemberView> recordsByPlayer;
 
     MemberService(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -66,16 +66,17 @@ public final class MemberService implements AutoCloseable {
     }
 
     public MemberView view(UUID playerUniqueId) {
-        List<MemberRecord> records = this.recordsByPlayer.get(playerUniqueId);
-        if (records == null) throw new IllegalStateException("Membership data is not loaded for " + playerUniqueId);
-        return new MemberView(playerUniqueId, records, this.definitionSnapshot(), Instant.now());
+        MemberView cached = this.recordsByPlayer.get(playerUniqueId);
+        if (cached == null) throw new IllegalStateException("Membership data is not loaded for " + playerUniqueId);
+        return new MemberView(playerUniqueId, cached.records(), this.definitionSnapshot(), Instant.now());
     }
 
     public CompletableFuture<MemberView> load(UUID playerUniqueId) {
         return CompletableFuture.supplyAsync(() -> {
             List<MemberRecord> records = this.repository.load(playerUniqueId);
-            this.recordsByPlayer.put(playerUniqueId, records);
-            return new MemberView(playerUniqueId, records, this.definitionSnapshot(), Instant.now());
+            MemberView view = new MemberView(playerUniqueId, records, this.definitionSnapshot(), Instant.now());
+            this.recordsByPlayer.put(playerUniqueId, view);
+            return view;
         }, this.executor);
     }
 
@@ -120,6 +121,35 @@ public final class MemberService implements AutoCloseable {
         ), this.executor);
     }
 
+    public CompletableFuture<MemberRecord> replace(
+            UUID playerUniqueId,
+            MemberKey key,
+            Duration duration,
+            Collection<MemberKey> replacedKeys
+    ) {
+        return this.replace(playerUniqueId, key, duration, replacedKeys, List.of());
+    }
+
+    public CompletableFuture<MemberRecord> replace(
+            UUID playerUniqueId,
+            MemberKey key,
+            Duration duration,
+            Collection<MemberKey> replacedKeys,
+            Collection<MemberKey> grantedKeys
+    ) {
+        this.requirePositive(duration);
+        MemberDefinition definition = this.requireDefinition(key);
+        if (replacedKeys.contains(key)) throw new IllegalArgumentException("Replacement memberships include target: " + key);
+        List<MemberDefinition> replaced = replacedKeys.stream().map(this::requireDefinition).toList();
+        if (grantedKeys.stream().anyMatch(granted -> granted.equals(key) || replacedKeys.contains(granted))) {
+            throw new IllegalArgumentException("Granted memberships overlap replacement memberships");
+        }
+        List<MemberDefinition> granted = grantedKeys.stream().distinct().map(this::requireDefinition).toList();
+        long nowMillis = System.currentTimeMillis();
+        return this.mutate(playerUniqueId, () -> this.repository.extend(
+                playerUniqueId, key, definition.scope(), nowMillis, duration.toMillis(), replaced, granted));
+    }
+
     public CompletableFuture<List<MemberRecord>> activeMembers(MemberKey key) {
         MemberDefinition definition = this.requireDefinition(key);
         return CompletableFuture.supplyAsync(
@@ -162,7 +192,7 @@ public final class MemberService implements AutoCloseable {
     }
 
     public void refresh(UUID playerUniqueId) {
-        List<MemberRecord> previous = this.recordsByPlayer.get(playerUniqueId);
+        MemberView previous = this.recordsByPlayer.get(playerUniqueId);
         this.load(playerUniqueId).whenComplete((view, throwable) -> {
             if (throwable != null) {
                 if (previous != null) this.recordsByPlayer.put(playerUniqueId, previous);
@@ -171,7 +201,10 @@ public final class MemberService implements AutoCloseable {
                 );
                 return;
             }
-            if (previous != null && !previous.equals(view.records())) this.fireChanged(playerUniqueId);
+            if (previous != null && (!previous.records().equals(view.records()) || previous.records().stream()
+                    .anyMatch(record -> previous.active(record.key()) != view.active(record.key())))) {
+                this.fireChanged(playerUniqueId);
+            }
         });
     }
 

@@ -21,7 +21,7 @@ public final class MemberView {
             Instant observedAt
     ) {
         this.playerUniqueId = playerUniqueId;
-        this.records = List.copyOf(records);
+        this.records = MemberTimeline.resolve(records);
         this.definitions = Map.copyOf(definitions);
         this.observedAt = observedAt;
     }

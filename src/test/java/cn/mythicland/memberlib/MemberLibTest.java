@@ -72,10 +72,13 @@ class MemberLibTest {
         DataSource dataSource = mock(DataSource.class, withSettings().extraInterfaces(AutoCloseable.class));
         when(dataSource.getConnection()).thenAnswer(ignored -> hostDatabase.getConnection());
         try (Connection connection = dataSource.getConnection();
-             Statement statement = connection.createStatement();
-             InputStream schema = this.getClass().getResourceAsStream("/memberlib/db/sqlite/V1__membership.sql")) {
-            for (String sql : new String(schema.readAllBytes(), StandardCharsets.UTF_8).split(";")) {
-                if (!sql.isBlank()) statement.execute(sql);
+             Statement statement = connection.createStatement()) {
+            for (String migration : List.of("V1__membership.sql", "V2__pause_covered_memberships.sql")) {
+                try (InputStream schema = this.getClass().getResourceAsStream("/memberlib/db/sqlite/" + migration)) {
+                    for (String sql : new String(schema.readAllBytes(), StandardCharsets.UTF_8).split(";")) {
+                        if (!sql.isBlank()) statement.execute(sql);
+                    }
+                }
             }
             statement.execute("CREATE TABLE host_data (value TEXT)");
             statement.execute("INSERT INTO host_data VALUES ('preserved')");
