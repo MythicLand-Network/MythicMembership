@@ -47,7 +47,11 @@ public final class MemberAdminCommand extends AbstractCommand implements Suggest
             usages = "/member info <玩家|UUID>",
             minArguments = 1,
             maxArguments = 1,
-            arguments = @CommandArgument(index = 0, source = SuggestionSource.COMPONENT, provider = MemberAdminCommand.class)
+            arguments = @CommandArgument(
+                    index = 0,
+                    source = SuggestionSource.COMPONENT,
+                    provider = MemberAdminCommand.class
+            )
     )
     private void info(CommandContext context) {
         this.withPlayer(context.sender(), context.argument(0), uniqueId -> this.service.load(uniqueId)
@@ -64,8 +68,16 @@ public final class MemberAdminCommand extends AbstractCommand implements Suggest
             minArguments = 3,
             maxArguments = 3,
             arguments = {
-                    @CommandArgument(index = 0, source = SuggestionSource.COMPONENT, provider = MemberAdminCommand.class),
-                    @CommandArgument(index = 1, source = SuggestionSource.COMPONENT, provider = MemberAdminCommand.class)
+                    @CommandArgument(
+                            index = 0,
+                            source = SuggestionSource.COMPONENT,
+                            provider = MemberAdminCommand.class
+                    ),
+                    @CommandArgument(
+                            index = 1,
+                            source = SuggestionSource.COMPONENT,
+                            provider = MemberAdminCommand.class
+                    )
             }
     )
     private void set(CommandContext context) {
@@ -83,8 +95,16 @@ public final class MemberAdminCommand extends AbstractCommand implements Suggest
             minArguments = 3,
             maxArguments = 3,
             arguments = {
-                    @CommandArgument(index = 0, source = SuggestionSource.COMPONENT, provider = MemberAdminCommand.class),
-                    @CommandArgument(index = 1, source = SuggestionSource.COMPONENT, provider = MemberAdminCommand.class)
+                    @CommandArgument(
+                            index = 0,
+                            source = SuggestionSource.COMPONENT,
+                            provider = MemberAdminCommand.class
+                    ),
+                    @CommandArgument(
+                            index = 1,
+                            source = SuggestionSource.COMPONENT,
+                            provider = MemberAdminCommand.class
+                    )
             }
     )
     private void extend(CommandContext context) {
@@ -102,8 +122,16 @@ public final class MemberAdminCommand extends AbstractCommand implements Suggest
             minArguments = 2,
             maxArguments = 2,
             arguments = {
-                    @CommandArgument(index = 0, source = SuggestionSource.COMPONENT, provider = MemberAdminCommand.class),
-                    @CommandArgument(index = 1, source = SuggestionSource.COMPONENT, provider = MemberAdminCommand.class)
+                    @CommandArgument(
+                            index = 0,
+                            source = SuggestionSource.COMPONENT,
+                            provider = MemberAdminCommand.class
+                    ),
+                    @CommandArgument(
+                            index = 1,
+                            source = SuggestionSource.COMPONENT,
+                            provider = MemberAdminCommand.class
+                    )
             }
     )
     private void permanent(CommandContext context) {
@@ -124,8 +152,16 @@ public final class MemberAdminCommand extends AbstractCommand implements Suggest
             minArguments = 2,
             maxArguments = 2,
             arguments = {
-                    @CommandArgument(index = 0, source = SuggestionSource.COMPONENT, provider = MemberAdminCommand.class),
-                    @CommandArgument(index = 1, source = SuggestionSource.COMPONENT, provider = RevokeSuggestions.class)
+                    @CommandArgument(
+                            index = 0,
+                            source = SuggestionSource.COMPONENT,
+                            provider = MemberAdminCommand.class
+                    ),
+                    @CommandArgument(
+                            index = 1,
+                            source = SuggestionSource.COMPONENT,
+                            provider = RevokeSuggestions.class
+                    )
             }
     )
     private void revoke(CommandContext context) {
